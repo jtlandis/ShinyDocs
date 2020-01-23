@@ -944,7 +944,12 @@ server <- function(input, output, session) {
                                        wordApp = wordApp,
                                        makeWhich = input$Docs2make,
                                        pw = pw)
-          
+          if(!is.null(docpaths[["error"]])){
+            er[j] <- docpaths[["error"]]
+            indx[j] <- i
+            j <- j+1
+          }
+          docpaths <- docpaths[["str"]]
           if(str_length(df[i,]$DocumentPaths)==0||is.na(df[i,]$DocumentPaths)){ #if DocuPath isnt filled, record path
             df[i,"DocumentPaths"] <- docpaths
           } else if(length(grep(x = df[i,]$DocumentPaths, pattern = docpaths, fixed = TRUE))==0){ #if docpaths isnt already there, concatonate path in. (otherwise do nothing because file was overwritten)

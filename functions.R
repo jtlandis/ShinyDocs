@@ -172,6 +172,7 @@ RDCOMFindReplace <- function(flags,
                              makeWhich = "both",
                              pw = NULL){
   extensions <- c()
+  er <- NULL
   docpath <- normalizePath(c("C://Users", docpath), winslash = "\\")[2]
   suppressWarnings(targetdir <- normalizePath(c("C://Users", targetdir), winslash = "\\")[2])
   doc <- wordApp[["Documents"]]$Open(docpath, Visible = FALSE)
@@ -187,6 +188,7 @@ RDCOMFindReplace <- function(flags,
   docText <- doc$Range()[["Text"]]
   if(length(detectFlags(docText))>0){
     print("Flag Replacement Error")
+    er <- "Document Flag Replacement"
   }
   
   if(makeWhich %in% c("both","docx")){
@@ -202,8 +204,8 @@ RDCOMFindReplace <- function(flags,
   }
   doc$Close(SaveChanges = 0)
   rm(doc)
-
-  return(str_flatten(paste0(targetdir,extensions), "|.|"))
+  retvalue <- list(str=str_flatten(paste0(targetdir,extensions), "|.|"), error = er)
+  return(retvalue)
 
   
 }
