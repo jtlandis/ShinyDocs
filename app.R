@@ -604,18 +604,10 @@ server <- function(input, output, session) {
   extensions = list('Buttons' = NULL,
                     'FixedColumns' = NULL),
   options = list(scrollX = TRUE,
-                 #                  columnDefs = list(
-                 #                    list(
-                 #                      targets  = 5,
-                 #                      render   = JS(
-                 #                        "function(data, type, row, meta) {",
-                 #                        "return type === 'display' && data.length > 15 ?",
-                 #                        "'<span title=\"' + data + '\">' +
-                 #                        data.substr(0, 15) + '...</span>' : data;", "}"))),
                  dom = 'Bfrltip',
                  lengthMenu = list(c(10, 25, 50, -1), c('10', '25', '50', 'All')),
                  fixedColumns = TRUE,
-                 buttons = list( I('colvis'),
+                 buttons = list(I('colvis'),
                                  list(extend = c('collection'),
                                       buttons = list(list(extend = 'csv',
                                                           filename = paste0(Sys.Date(),"_Submitted_Export")),
@@ -987,42 +979,43 @@ server <- function(input, output, session) {
       
       wordApp$Quit() #quit wordApp
       ERROR <- data.frame(ErrorType = er, Index = indx)
-      erPath <- paste0(rv$DocPath,
-                       "\\",
-                       Sys.Date(),"_Creation_ERROR_Log.csv")
-      if(file.exists(erPath)){
-        erPath <- create_latestversion(path = rv$DocPath,
-                                       pattern = paste0(Sys.Date(),"_Creation_ERROR_Log"),
-                                       device = ".csv")
-      }
-      write.csv(x = ERROR, file = erPath)
       rv$Masterdf[,usingFlags] <- df[,usingFlags]
       saveBackup()
       print("Done making Documents")
     })
     rm(wordApp)
+    if(nrow(ERROR)>0){
+      rv$DocumentsWarning <- ERROR
+      write.csv(ERROR, file = create_latestversion(path = here("log"),
+                                                   pattern = paste0(Sys.Date(),"_Creation_ERROR_Log"),
+                                                   decive = ".csv"))
+      showModal(
+        modalDialog(strong("WARNING", style = "color: red;"),
+                    p("Please check the documents below for their respective errors!", style = "color: red;"),
+                    wellPanel(
+                      dataTableOutput("DocumentsWarning")
+                    ),
+                    easyClose = F
+        )
+      )
+      
+    }
     
-    
-    # req(input$ChooseTemplate)
-    # 
-    # 
-    # if(!is.null(rv$DocPath)&&dir.exists(rv$DocPath)){
-    #   if(all(rv$detectedIDs%in%colnames(df))&&
-    #      rv$isUnique&&
-    #      !(is.null(rv$FileNameOutput)|is.null(rv$DocPath))){
-    #       above text went here!
-    #   }
-    # } else {
-    #   showModal(
-    #     modalDialog(
-    #       paste0(rv$DocPath, " has been moved or deleted. Please select a new Output Directory and try again."),
-    #       easyClose = T
-    #     )
-    #   )
-    # }
+
     
     
   })
+  
+  output$DocumentsWarning <- renderDT({
+    rv$DocumentsWarning
+  }, class = c("compact stripe cell-border nowrap hover"),
+  extensions = list('Buttons' = NULL,
+                    'FixedColumns' = NULL),
+  options = list(scrollY = TRUE,
+                 dom = 'Bfrltip',
+                 lengthMenu = list(c(5, 25, 50, -1), c('5', '25', '50', 'All')),
+                 fixedColumns = TRUE)
+  )
   
   # output$emailpreview1 <- renderUI({
   #     req(input$EmailEditor)
