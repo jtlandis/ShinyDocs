@@ -1,0 +1,42 @@
+.content {
+  padding-top: 60px;
+}
+
+.sticky{
+  position: sticky;
+  padding-top: 20px;
+  top: 0;
+  
+}
+
+.well {
+  background-color: #CEEAE8;
+}
+
+
+body {
+  background-color: #2899B0 ;
+}
+
+.datatables{
+  background-color: #CEEAE8;
+  padding: 10px;
+}
+
+.tabbable > .nav >li >a{
+  background-color: #DEDEDE;
+  color: black;
+}
+.tabbable > .nav >li[class=active] >a {
+  background-color: #66B4BF;
+  color: #FFF6EE;
+  font-weight: bold;
+}
+
+.shiny-notification {
+              height: 100px;
+              width: 400px;
+              position:fixed;
+              top: calc(50% - 50px);;
+              left: calc(50% - 200px);;
+            }
