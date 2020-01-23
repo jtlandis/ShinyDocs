@@ -723,7 +723,9 @@ server <- function(input, output, session) {
     txt <-rv$OutPutFileMessage
     if(is.null(rv$isUnique)||!rv$isUnique){
       txt <- strong(p(txt,style ="color:red"))
-    }  
+    } else {
+      txt <- strong(p(txt), style = "color:green;")
+    }
     as.character(txt)
     #textOutput("MessageFileNameOutput")
     
@@ -734,6 +736,8 @@ server <- function(input, output, session) {
     txt <- rv$OutPutEmailMessage
     if(!txt %in%c("All Flags Present in dataframe!")){
       txt <- p(strong(txt), style = "color:red")
+    } else {
+      txt <- strong(p(txt), style = "color:green;")
     }
     as.character(txt)
     })
@@ -764,7 +768,7 @@ server <- function(input, output, session) {
       if(sum(!InColumnSpace)==0){
         str <- p(paste0(length(detected),
                       " detected flags found in Template docx. All ",
-                      length(detected)," detected flags are in the column headers."))
+                      length(detected)," detected flags are in the column headers."),style="color:green")
       } else {
         str <- p(strong(paste0(length(detected),
                       " detected flags found in Template docx. ",
@@ -907,6 +911,7 @@ server <- function(input, output, session) {
     wordApp <- COMCreate("Word.Application") #creates COM object
     er <- character()
     indx <- numeric()
+    whichflag <- character()
     j <- 1
     withProgress(message = "Making Documents", value = 0/n, expr = {
       for(i in 1:nrow(df)){
@@ -916,12 +921,13 @@ server <- function(input, output, session) {
         if(length(additionalFlags)==1){
           test <- is.na(test)
         } else{
-          test <- apply(test, 1, FUN = is.na) #Test if we can even write the file
+          test <- apply(test, 2, FUN = is.na) #Test if we can even write the file
         }
         if(any(test)){
           incProgress(1/n, detail = paste("Row", i, "contains NAs in Output File flags ... skipping"))
           er[j] <- "File Name"
           indx[j] <- i
+          whichflag[j] <- paste0(additionalFlags[test],collapse = ", ")
           j <- j+1
           print(paste("Skipping Row ", i, ", File Name Error"))
         } else { # if(str_length(tmpdata$DocumentsMade)==0||length(grep(tmpdata$DocumentsMade, input$ChooseTemplate$name, fixed = TRUE))==0)   ....equals not found ... Add overwrite toggle
@@ -959,16 +965,18 @@ server <- function(input, output, session) {
           if(length(rv$detectedIDs)==1){
             test <- is.na(test)
           } else{
-            test <- apply(test, 1, FUN = is.na)
+            test <- apply(test, 2, FUN = is.na)
           }
           if(any(test)){
             s <- sum(test)
             if(s==1){
               er[j] <- "Flag Value"
+              whichflag[j] <- paste0(rv$detectedIDs[test],collapse = ", ")
               indx[j] <- i
               j <- j+1
             } else {
               er[j] <- "Flag Value"
+              whichflag[j] <- paste0(rv$detectedIDs[test],collapse = ", ")
               indx[j] <- i
               j <- j+1
             }
@@ -978,7 +986,7 @@ server <- function(input, output, session) {
       }
       
       wordApp$Quit() #quit wordApp
-      ERROR <- data.frame(ErrorType = er, Index = indx)
+      ERROR <- data.frame(ErrorType = er, RowNumber = indx, flags = whichflag)
       rv$Masterdf[,usingFlags] <- df[,usingFlags]
       saveBackup()
       print("Done making Documents")
@@ -1032,10 +1040,50 @@ server <- function(input, output, session) {
   #     req(input$EmailEditor)
   #     HTML(enc2utf8(input$EmailEditor))})
   #This will first test that officer package is working and replaces values and saves documents.
+ 
+  observeEvent(input$SendEmails,{
+    
+    if(any(rv$nadf$NumNA>0)){
+      rv$emaildftable <- rv$nadf[rv$nadf$NumNA>0,]
+      showModal(
+        modalDialog(
+          title = strong("Warning",style="color:red;"),
+          p("Some cells in the dataframe contain NA's. 
+            If you continue they will be replaced with nothing. Do you wish to continue?"),
+          wellPanel(
+            dataTableOutput("EmailWarning"), style="height:350px;overflow-y:scroll;"
+          ),
+          footer = tagList(
+            actionButton("SendEmails2", "Continue"),
+            modalButton("Cancel")
+          ),
+          easyClose = F
+        )
+      )
+    } else {
+      SendTheEmails()
+    }
+    
+  }) 
+  
+  output$EmailWarning <- renderDT({
+    rv$emaildftable
+  }, class = c("compact stripe cell-border nowrap hover"),
+  extensions = list('Buttons' = NULL,
+                    'FixedHeader' = NULL),
+  options = list(dom = 'Bfrltip',
+                 fixedHeader = TRUE,
+                 pageLength = 10,
+                 buttons = c('copy', 'csv', 'excel', 'pdf'),
+                 paging = T), server = F)
   
   
+  observeEvent(input$SendEmails2, {
+    removeModal()
+    SendTheEmails()
+  })
   
-  observeEvent(input$SendEmails, {
+  SendTheEmails <- reactive({
     req(input$EmailEditor)
     if(rv$CanRun&&!(is.null(rv$Subject))){
       #req(rv$BehalfEmail)
@@ -1175,9 +1223,7 @@ server <- function(input, output, session) {
         )
       )
     }
-    
   })
-  
   
   
   output$NAflags <- renderUI({
@@ -1200,8 +1246,8 @@ server <- function(input, output, session) {
     
   })
   
-  output$NAplot <- renderPlot({
- 
+  observe({
+    req(input$EmailEditor)
     longstr <- paste(input$EmailEditor,rv$Subject, rv$CCoption, rv$BehalfEmail)
     additionalFlags <- gsub(pattern = "\\[|\\]",
                             replacement = "",
@@ -1211,7 +1257,6 @@ server <- function(input, output, session) {
       additionalFlags <- c(additionalFlags, rv$SendTo)
     }
     additionalFlags <- unique(additionalFlags)
-    m <- rv$OutPutEmailMessage
     df <- rv$Masterdf
     .df <- df[,colnames(df) %in% additionalFlags]
     if(sum(colnames(df) %in% additionalFlags)==1){
@@ -1225,7 +1270,13 @@ server <- function(input, output, session) {
       addfakes <- data.frame(Flags = additionalFlags[!additionalFlags %in% colnames(df)], NumNA =0)
       nadf <- rbind(nadf, addfakes)
     }
-    ggplot(nadf, aes(x=as.factor(Flags), y = as.numeric(NumNA))) +
+    rv$nadf <- nadf
+  })
+  
+  output$NAplot <- renderPlot({
+    m <- rv$OutPutEmailMessage
+    NumNonz <- rv$nadf$NumNA!=0
+    ggplot(rv$nadf, aes(x=as.factor(Flags), y = as.numeric(NumNA))) +
       geom_bar(stat = "identity", fill = "blue") +
       labs(x = "\nFlags",
            y = "Number of NA\n",
