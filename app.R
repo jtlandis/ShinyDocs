@@ -1192,7 +1192,7 @@ server <- function(input, output, session) {
           incProgress(1/n, detail = paste("Sending Email for row #", i))
         }
         
-        if(input$IncludeAttachments||input$IncludeAddAttachment){
+        if((input$IncludeAttachments||input$IncludeAddAttachment)&&length(er)>0){
           if(is.null(rv$DocPath)||!dir.exists(rv$DocPath)){
             print("Document path is not set. Setting to rootR/logs")
             docpaths <- normalizePath(c("C:/Users/",here("log")), winslash = "\\")[[2]]
