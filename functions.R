@@ -171,7 +171,7 @@ RDCOMFindReplace <- function(flags,
                              wordApp,
                              makeWhich = "both",
                              pw = NULL){
-  #browser()
+  extensions <- c()
   docpath <- normalizePath(c("C://Users", docpath), winslash = "\\")[2]
   suppressWarnings(targetdir <- normalizePath(c("C://Users", targetdir), winslash = "\\")[2])
   doc <- wordApp[["Documents"]]$Open(docpath, Visible = FALSE)
@@ -188,24 +188,21 @@ RDCOMFindReplace <- function(flags,
   if(length(detectFlags(docText))>0){
     print("Flag Replacement Error")
   }
-  if(makeWhich %in% c("both","pdf")){
-    doc$SaveAs(paste0(targetdir,".pdf"), FileFormat=17) #saves as PDF
-  }
+  
   if(makeWhich %in% c("both","docx")){
     if(!is.null(pw)&&str_length(pw)>0){
       doc$Protect(0, password = pw)
     }
     doc$SaveAs(paste0(targetdir,".docx"))
+    extensions <- c(extensions, ".docx")
+  }
+  if(makeWhich %in% c("both","pdf")){
+    doc$SaveAs(paste0(targetdir,".pdf"), FileFormat=17) #saves as PDF
+    extensions <- c(extensions, ".pdf")
   }
   doc$Close(SaveChanges = 0)
   rm(doc)
-  if(makeWhich %in% "both"){
-    extensions <- c(".docx",".pdf")
-  } else if(makeWhich %in% "docx"){
-    extensions <- c(".docx")
-  } else if(makeWhich %in% "pdf") {
-    extensions <- c(".pdf")
-  }
+
   return(str_flatten(paste0(targetdir,extensions), "|.|"))
 
   
