@@ -986,18 +986,28 @@ server <- function(input, output, session) {
     rm(wordApp)
     if(nrow(ERROR)>0){
       rv$DocumentsWarning <- ERROR
-      write.csv(ERROR, file = create_latestversion(path = here("log"),
-                                                   pattern = paste0(Sys.Date(),"_Creation_ERROR_Log"),
-                                                   decive = ".csv"))
       showModal(
         modalDialog(strong("WARNING", style = "color: red;"),
                     p("Please check the documents below for their respective errors!", style = "color: red;"),
-                    wellPanel(
-                      dataTableOutput("DocumentsWarning")
+                    tags$ul(
+                      tags$li(strong("File Name"), 
+                              p("This indicates that at least one of the flags 
+      used to build the file name was NA for the index (cell on the data frame).
+      Rows with this error do not produce any documents.")),
+                      tags$li(strong("Flag Value"),
+                              p("Indicates a flag was NA in the document. Documents are still 
+      made however an empty string is substituted into the document in place of
+      the flag. This is not ideal because it may be an important value to your document, please check documents."))
                     ),
+                    p("For more information check the error help page."),
+                    wellPanel(
+                                     dataTableOutput("DocumentsWarning"), style="height:350px;overflow-y:scroll;"
+                                     #scrollCollapse:true;
+                      ),
                     easyClose = F
+                    )
         )
-      )
+      
       
     }
     
@@ -1010,11 +1020,12 @@ server <- function(input, output, session) {
     rv$DocumentsWarning
   }, class = c("compact stripe cell-border nowrap hover"),
   extensions = list('Buttons' = NULL,
-                    'FixedColumns' = NULL),
-  options = list(scrollY = TRUE,
-                 dom = 'Bfrltip',
-                 lengthMenu = list(c(5, 25, 50, -1), c('5', '25', '50', 'All')),
-                 fixedColumns = TRUE)
+                    'FixedHeader' = NULL),
+  options = list(dom = 'Bfrltip',
+                 fixedHeader = TRUE,
+                 pageLength = 10,
+                 buttons = c('copy', 'csv', 'excel', 'pdf'),
+                 paging = T), server = F
   )
   
   # output$emailpreview1 <- renderUI({
