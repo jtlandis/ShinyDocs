@@ -162,7 +162,15 @@ make_str_literal <- function(string,
 # nodes <- getnodes(doc)
 
 
-
+test_wordapp <- function(app){
+  tryCatch({app[["Documents"]]
+    return(app)},
+    error=function(cond){
+      print("Word app does not seem to be accessible, Returning a new app")
+      app <- COMCreate("Word.Application")
+      return(app)
+    })
+}
 
 RDCOMFindReplace <- function(flags,
                              data,
@@ -173,12 +181,14 @@ RDCOMFindReplace <- function(flags,
                              pw = NULL){
   extensions <- c()
   er <- NULL
+  wordApp <- test_wordapp(wordApp)
   docpath <- normalizePath(c("C://Users", docpath), winslash = "\\")[2]
   suppressWarnings(targetdir <- normalizePath(c("C://Users", targetdir), winslash = "\\")[2])
   doc <- wordApp[["Documents"]]$Open(docpath, Visible = FALSE)
   
   for(f in flags){
     replace <- data[[f]]
+    replace <- ifelse(is.na(replace), "",as.character(replace))
     doc$Range()[["Find"]]$Execute(FindText = paste0("[",f,"]"),
                                   ReplaceWith = replace, Replace = 2) #Uses RDCOMClient to replace fields.
     targetdir <- gsub(paste0("[",f,"]"), gsub(pattern = "\\/|\"",
