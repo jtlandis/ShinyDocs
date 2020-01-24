@@ -1250,7 +1250,7 @@ server <- function(input, output, session) {
   })
   
   observe({
-    req(input$EmailEditor)
+    req(input$EmailEditor, rv$Masterdf)
     longstr <- paste(input$EmailEditor,rv$Subject, rv$CCoption, rv$BehalfEmail)
     additionalFlags <- gsub(pattern = "\\[|\\]",
                             replacement = "",
