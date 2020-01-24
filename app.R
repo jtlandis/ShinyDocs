@@ -1044,7 +1044,10 @@ server <- function(input, output, session) {
   observeEvent(input$SendEmails,{
     
     if(any(rv$nadf$NumNA>0)){
-      rv$emaildftable <- rv$nadf[rv$nadf$NumNA>0,]
+      df <- rv$nadf[rv$nadf$NumNA>0,]
+      rownames(df) <- 1:nrow(df)
+      colnames(df) <- c("Flags","NumberOfNAs")
+      rv$emaildftable <- df
       showModal(
         modalDialog(
           title = strong("Warning",style="color:red;"),
@@ -1488,8 +1491,8 @@ shinyApp(ui, server)
 #                   include_R = T,
 #                   user_browser = "chrome",
 #                   app_icon = "EZDocs.ico",
-#                   app_version = "0.1.8"
+#                   app_version = "0.1.10"
 # 
 # )
-# compile_iss()
+# RInno::compile_iss()
 
