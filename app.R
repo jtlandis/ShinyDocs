@@ -1139,6 +1139,8 @@ server <- function(input, output, session) {
           Totmp <- Totmp[!(.t==0|is.na(.t))]
           if(length(Totmp)>1){
             Totmp <- paste(Totmp, collapse = ";")
+          } else if(length(Totmp)==0){
+            Totmp <-""
           }
           
           subtmp <- sub_flag_in_str(x = sub, flags = additionalFlags, data = tmpdata)
@@ -1190,9 +1192,17 @@ server <- function(input, output, session) {
               }
             }
           }
-          outMail$Send()
-          print(paste0("Sending Email for row ", i,"."))
-          incProgress(1/n, detail = paste("Sending Email for row #", i))
+          if(str_length(outMail[["to"]])==0){
+            progmessage <-  paste0(i,": No sending address. Saved as draft!")
+            outMail$Save()
+          } else {
+            progmessage <- paste("Sent Email for row #", i)
+            print(paste0("Sending Email for row ", i,"."))
+            outMail$Send()
+          }
+          
+          
+          incProgress(1/n, detail = progmessage)
         }
         
         if((input$IncludeAttachments||input$IncludeAddAttachment)&&length(er)>0){
