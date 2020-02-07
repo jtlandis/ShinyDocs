@@ -1,8 +1,9 @@
 .posRoot <- paste(str_split(getwd(),pattern = "/")[[1]][1:3],collapse = "/")
 .files <- list.files(.posRoot)
-.files <- .files[.files %in% c("Desktop","Documents","Downloads")]
-.p <- paste0(.posRoot,"/",c("Desktop","Documents","Downloads"))
-.pavail <- c("Desktop","Documents","Downloads") %in% .files
+.locations <- c("Desktop","Documents","Downloads")
+.files <- .files[.files %in% .locations]
+.p <- paste0(.posRoot,"/",.locations)
+.pavail <- .locations %in% .files
 if(length(.pavail)==0){
   dirList <- list(home = "~", rootR = here())
 } else {

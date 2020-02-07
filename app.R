@@ -46,7 +46,7 @@ ui <- shinyUI(
                  fluidRow(
                    column(6,
                           fileInput("ChooseTemplate",
-                                    "Choose Template File (.docx)",
+                                    "Upload Word Template File (.docx)",
                                     accept = c(".docx")
                           ),
                           htmlOutput("DetectedIDs"),
@@ -54,7 +54,7 @@ ui <- shinyUI(
                             column(6,
                                    br(),
                                    shinyDirButton("dir",
-                                                  "Choose Output Directory",
+                                                  "Choose Output Folder",
                                                   title = "Upload"),
                                    htmlOutput(outputId = "dirDisplay")
                             ),
@@ -70,7 +70,7 @@ ui <- shinyUI(
                                      column(12,
                                             br(),
                                             fileInput("TableIn",
-                                                      "Choose Template Table (Excel)",
+                                                      "Upload Table (Excel, .CSV format)",
                                                       accept = c(".xls",".xlsx",".csv")
                                             ),
                                             uiOutput(outputId = "SheetSelection")
@@ -107,7 +107,8 @@ ui <- shinyUI(
                  fluidRow(
                    column(6,
                           tinyMCE("EmailEditor",
-                                  content = "Write Your Email Here! Please use \"[ ]\" to idicate replacement fields")
+                                  content = "Write Your Email Here! Please use \"[ ]\" to idicate replacement fields"),
+                          htmlOutput("EmailOutputsignature")
                    ),
                    uiOutput("EmailPanel")
                  ),
@@ -213,7 +214,7 @@ ui <- shinyUI(
              Only text that exactly match the column headers of
              the imported Data Frame are valid Flags. In most cases the application
              will attempt to warn you if it detects a flag that is invalid. Flags should be used in at least 
-             the template.docx file and the Output File Name field. Flags may be used in the email section as
+             the template.docx file and the Customize New File Name field. Flags may be used in the email section as
              well.")
                                   ),
                               div(class="tab-pane",
@@ -223,19 +224,19 @@ ui <- shinyUI(
                                   tags$ul(
                                     tags$li(h4(strong("Document Setup")),
                                             tags$ul(
-                                              tags$li(strong("Choose Template File"),
+                                              tags$li(strong("Upload Word Template File"),
                                                       p("Opens a file browser to select the Word document template. Restrictions in the code requires that the uploaded word document
 		is a .docx file. Once a file is chosen the application will notify the user of how many flags it detects and
 		how many of those flags are valid (Also found within the excel spreadsheet). If any flags are invalid it will notify the user. The user will
 		not be able to make documents until all flags are valid")
                                               ),
-                                              tags$li(strong("Choose Output Directory"),
+                                              tags$li(strong("Choose Output Folder"),
                                                       p("Opens a window to select an output directory (where documents will be stored). By default four locations are chosen: Desktop, Documents, Downloads, and rootR.
 		The rootR directory is where the application will be running from and is where it saves its backup Rdata files and R code. It is not recommended
 		for the user to use this directory to store files and is only listed such that the user may find it if needed. Once a directory is chosen
 		it will output the path under the button. Users may copy this path into their Desktop's file explorer to navigate to the location of the documents quickly.")
                                               ),
-                                              tags$li(strong("Output File Name"),
+                                              tags$li(strong("Customize New File Name"),
                                                       p("This field specifies how each document will be named. It is necessary that the user uses a combination of flags, so
                                      the expected output names are unique. This is to prevent the user from overwriting other documents automatically.
 		This does not check for any NA values. Documents whose names contain an NA values are not written. This is because the 
@@ -638,12 +639,12 @@ server <- function(input, output, session) {
   
   output$DynamicInput <- renderUI({
     textInput(inputId = "FileNameOutput",
-              "Output File Name", value = isolate(rv$FileNameOutput))
+              "Customize New File Name", value = isolate(rv$FileNameOutput))
   })
   
   observe({
     rv$FileNameOutput <- input$FileNameOutput
-    print(paste0("Output File Name changed to: ", rv$FileNameOutput))
+    print(paste0("Customize New File Name changed to: ", rv$FileNameOutput))
   })
   
   
@@ -663,7 +664,7 @@ server <- function(input, output, session) {
           rv$OutPutFileMessage <- "Flag Combination Is not Unique. Please add another."
           rv$isUnique <- FALSE
         } else {
-          rv$OutPutFileMessage <- "Flag Combination Is Unique. Able To Make Documents!"
+          rv$OutPutFileMessage <- "There are no duplicates. All Flags are unique and matched with a column labels on your excel table."
           rv$isUnique <- TRUE
         }
       } else {
@@ -672,13 +673,18 @@ server <- function(input, output, session) {
           rv$OutPutFileMessage <- "Flag Combination Is not Unique. Please add another."
           rv$isUnique <- FALSE
         } else {
-          rv$OutPutFileMessage <- "Flag Combination Is Unique. Able To Make Documents!"
+          rv$OutPutFileMessage <- "There are no duplicates. All Flags are unique and matched with a column labels on your excel table."
           rv$isUnique <- TRUE
         }
       }
     } else {
-      m <- str_flatten(paste0("\"",additionalFlags[!additionalFlags %in% colnames(df)],"\""), ", ")
-      rv$OutPutFileMessage <- paste0("Not Found in column headers: ", m)
+      .num <- additionalFlags[!additionalFlags %in% colnames(df)]
+      m <- str_flatten(paste0("\"",.num,"\""), ", ")
+      if(length(.num)>1){
+        rv$OutPutFileMessage <- paste0("The following flags are not found as column labels in your excel table: ", m)
+      } else {
+        rv$OutPutFileMessage <- paste0("The following flag is not found as a column label in your excel table: ", m)
+      }
       rv$isUnique <- FALSE
     }
     
@@ -704,9 +710,12 @@ server <- function(input, output, session) {
   observe({
     # browser()
     df <- isolate(rv$Masterdf)
-    longstr <- c(input$EmailEditor,rv$Subject, rv$BehalfEmail, rv$CCoption)
+    emailedit <- input$EmailEditor
+    emailedit <- str_remove_all(emailedit, pattern = "\\<[^\\>]+\\>")
+    longstr <- c(emailedit,rv$Subject, rv$BehalfEmail, rv$CCoption)
     additionalFlags <- gsub(pattern = "\\[|\\]", replacement = "", x = unlist(str_extract_all(longstr, pattern = "\\[[^\\]]+\\]")))
     additionalFlags <- c(additionalFlags,  rv$SendTo)
+    additionalFlags <- unique(additionalFlags)
     CanRun <- additionalFlags %in% colnames(df)
     if(length(CanRun)!=0&&all(CanRun)){
       rv$OutPutEmailMessage <- "All Flags Present in dataframe!"
@@ -752,7 +761,7 @@ server <- function(input, output, session) {
   
   #   observeEvent(input$ok2, {
   #     removeModal()
-  #     updateTextInput(session, inputId = "FileNameOutput",label = "Output File Name", value = input$NotUnique)
+  #     updateTextInput(session, inputId = "FileNameOutput",label = "Customize New File Name", value = input$NotUnique)
   #   })
   
   
@@ -820,7 +829,7 @@ server <- function(input, output, session) {
       }
       showModal(
         modalDialog(
-          paste0(m, " has been moved or deleted. Please select a new Output Directory and try again."),
+          p(paste0(m, " has been moved or deleted. Please select a new Output Directory and try again."), style = "color: red;"),
           easyClose = T
         )
       )
@@ -828,7 +837,7 @@ server <- function(input, output, session) {
     } else if(!rv$isUnique){
       showModal(
         modalDialog(
-          paste0("File Name Output is not unique. Add an additional Flag so files will not overwrite each other."),
+          p(paste0("Flag combination will create duplicates document names. Add an additional Flag to make unique documents."), style = "color: red;"), #style??
           easyClose = T
         )
       )
@@ -836,7 +845,7 @@ server <- function(input, output, session) {
     } else if(is.null(input$ChooseTemplate)){
       showModal(
         modalDialog(
-          paste0("A template .docx file has not yet been selected."),
+          p(paste0("A template .docx file has not yet been selected."), style = "color: red;"),
           easyClose = T
         )
       )
@@ -1051,7 +1060,7 @@ server <- function(input, output, session) {
       showModal(
         modalDialog(
           title = strong("Warning",style="color:red;"),
-          p("Some cells in the dataframe contain NA's. 
+          p("Some cells in the dataframe contain NA's/empty values. 
             If you continue they will be replaced with nothing. Do you wish to continue?"),
           wellPanel(
             dataTableOutput("EmailWarning"), style="height:350px;overflow-y:scroll;"
@@ -1147,13 +1156,15 @@ server <- function(input, output, session) {
           Bodytmp <- sub_flag_in_str(x = Body, flags = additionalFlags, data = tmpdata)
           
           outMail = OutApp$CreateItem(0)
+          outMail$GetInspector()
+          signature <- outMail[["HTMLBody"]]
           outMail[["to"]] = Totmp
           CCtmp <- gsub(pattern = " ", replacement = "", x = CCtmp, fixed = T)
           if(str_length(CCtmp)!=0&&!CCtmp %in% c(",")){
             outMail[["Cc"]] = CCtmp
           }
           outMail[["subject"]] = subtmp
-          outMail[["HTMLBody"]] = Bodytmp
+          outMail[["HTMLBody"]] = paste0("<p>",Bodytmp,signature,"</p>")
           print("attempting to attach documents")
           if(rv$SendOnBehalf){
             outMail[["sentonbehalfofname"]] <- rv$BehalfEmail
@@ -1169,7 +1180,7 @@ server <- function(input, output, session) {
             for(j in 1:length(docPaths)){
               if(file.exists(docPaths[j])){
                 outMail[["attachments"]]$Add(docPaths[j])
-              } else {
+              } else if(docPaths[j]!="") {
                 er[k] <- "Document DNE"
                 docID[k] <- docPaths[j]
                 indx[k] <- i
@@ -1216,7 +1227,7 @@ server <- function(input, output, session) {
                            "\\",
                            Sys.Date(),"_Attachment_ERROR_Log.csv")
           if(file.exists(erPath)){
-            erPath <- create_latestversion(path = rv$DocPath,
+            erPath <- create_latestversion(path = docpaths,
                                            pattern = paste0(Sys.Date(),"_Attachment_ERROR_Log"),
                                            device = ".csv")
           }
@@ -1273,9 +1284,9 @@ server <- function(input, output, session) {
     df <- rv$Masterdf
     .df <- df[,colnames(df) %in% additionalFlags]
     if(sum(colnames(df) %in% additionalFlags)==1){
-      nadf <- sum(is.na(.df))
+      nadf <- sum(is.na(.df)|(str_length(.df)==0))
     } else {
-      nadf <- apply(.df, 2, function(x){sum(is.na(x))})
+      nadf <- apply(.df, 2, function(x){sum(is.na(x)|(str_length(x)==0))})
     }
     NumNonz <- nadf!=0
     nadf <- data.frame(Flags = additionalFlags[additionalFlags %in% colnames(df)], NumNA=nadf)
@@ -1400,6 +1411,16 @@ server <- function(input, output, session) {
            ),
            
     )
+  })
+  
+  output$EmailOutputsignature <- renderText({
+    OutApp <- COMCreate("Outlook.Application")
+    outMail = OutApp$CreateItem(0)
+    outMail$GetInspector()
+    signature <- outMail[["HTMLBody"]]
+    outMail$Close(1)
+    rm(outMail, OutApp)
+    signature
   })
   observe({ 
     if(!is.null(input$SendTo)){
