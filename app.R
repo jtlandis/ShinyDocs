@@ -499,7 +499,7 @@ server <- function(input, output, session) {
   # })
   
   saveBackup <- reactive({
-    path <- here("./backups")
+    path <- here("backups")
     files <- paste0(path, "/",list.files(path =path, pattern = ".*\\.rds"))
     if(length(files)>=MaxBackup){
       oldestFile <- files[which.min(file.mtime(files))]
@@ -721,8 +721,13 @@ server <- function(input, output, session) {
       rv$OutPutEmailMessage <- "All Flags Present in dataframe!"
       rv$CanRun <- TRUE
     } else {
-      m <- str_flatten(paste0("\"",additionalFlags[!additionalFlags %in% colnames(df)],"\""), ", ")
-      rv$OutPutEmailMessage <- paste0("Not Found in column headers : ", m)
+      .num <- additionalFlags[!additionalFlags %in% colnames(df)]
+      m <- str_flatten(paste0("\"",.num,"\""), ", ")
+      if(length(.num)>1){
+        rv$OutPutEmailMessage <- paste0("The following flags are not found as column labels in your excel table: ", m)
+      } else {
+        rv$OutPutEmailMessage <- paste0("The following flag is not found as a column label in your excel table: ", m)
+      }
       rv$CanRun <- FALSE
     }
   })
@@ -752,7 +757,7 @@ server <- function(input, output, session) {
     })
   
   observeEvent(input$ok, {
-    load(paste0(path,"/",input$backupSelect))
+    .backup <- readRDS(paste0(here("backups"),"/",input$backupSelect))
     rv$Masterdf <- .backup
     rv$ColIDs <- colnames(rv$Masterdf)
     CheckDF()
@@ -1521,7 +1526,7 @@ shinyApp(ui, server)
 #                   include_R = T,
 #                   user_browser = "chrome",
 #                   app_icon = "EZDocs.ico",
-#                   app_version = "0.1.10"
+#                   app_version = "0.1.12"
 # 
 # )
 # RInno::compile_iss()
