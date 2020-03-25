@@ -185,12 +185,15 @@ RDCOMFindReplace <- function(flags,
   docpath <- normalizePath(c("C://Users", docpath), winslash = "\\")[2]
   suppressWarnings(targetdir <- normalizePath(c("C://Users", targetdir), winslash = "\\")[2])
   doc <- wordApp[["Documents"]]$Open(docpath, Visible = FALSE)
-  
+  docText <- doc$Range()[["Text"]]
+  possible_flags <- detectFlags(docText)
   for(f in flags){
     replace <- data[[f]]
     replace <- ifelse(is.na(replace), "",as.character(replace))
-    doc$Range()[["Find"]]$Execute(FindText = paste0("[",f,"]"),
-                                  ReplaceWith = replace, Replace = 2) #Uses RDCOMClient to replace fields.
+    if(f %in% possible_flags){
+      doc$Range()[["Find"]]$Execute(FindText = paste0("[",f,"]"),
+                                    ReplaceWith = replace, Replace = 2) #Uses RDCOMClient to replace fields.
+    }
     targetdir <- gsub(paste0("[",f,"]"), gsub(pattern = "\\/|\"",
                                               replacement = "_",
                                               x = replace), x = targetdir, fixed = TRUE)
@@ -232,6 +235,7 @@ RDCOMpassword <- function(docpath, pw){
     rm(app, doc)
   }
 }
+
 
 
 
