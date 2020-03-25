@@ -1122,7 +1122,7 @@ server <- function(input, output, session) {
       k <- 1
       print("Starting to Send Emails")
       print(paste0("Subject: ", sub))
-      print(paste0("To: ", To))
+      print(paste0("To: ", paste0(To, collapse = ", ")))
       print(paste0("CC: ", CC))
       if(rv$SendOnBehalf){
         print(paste0("Send on Behalf: ",rv$BehalfEmail))
@@ -1159,8 +1159,7 @@ server <- function(input, output, session) {
           outMail$GetInspector()
           signature <- outMail[["HTMLBody"]]
           outMail[["to"]] = Totmp
-          CCtmp <- gsub(pattern = " ", replacement = "", x = CCtmp, fixed = T)
-          if(str_length(CCtmp)!=0&&!CCtmp %in% c(",")){
+          if(str_length(CCtmp)!=0&&!CCtmp %in% c(",")&&str_length(CCtmp)!=str_count(CCtmp, " ")){
             outMail[["Cc"]] = CCtmp
           }
           outMail[["subject"]] = subtmp
