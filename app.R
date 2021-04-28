@@ -431,7 +431,7 @@ server <- function(input, output, session) {
       #isolate(saveMCEcontent(input$EmailEditor))
       print("Stopping Application")
       stopApp()
-      # q("no")
+      q("no")
     })
   }
   
@@ -1516,18 +1516,23 @@ server <- function(input, output, session) {
 
 shinyApp(ui, server)
 
-#Sys.setenv("Tar"="internal")
+#----  https://github.com/ficonsulting/RInno/issues/152
+# trace(RInno::get_R,edit=T) #change [1-3] --> [1-9]+ on custom loaded version of RInno
+# trace(RInno::code_section,edit=T)
+
+# Sys.setenv("Tar"="internal")
 # RInno::create_app(app_name = "EZDocs",
 #                   app_dir = here::here(),
 #                   dir_out = "Installer", pkgs = c("shiny","shinyFiles",
 #                                                   "DT","readxl","stringr",
 #                                                   "RJSONIO","ggplot2","here"),
-#                   remotes = c("omegahat/RDCOMClient","mul118/shinyMCE"),
+#                   remotes = c("omegahat/RDCOMClient","jtlandis/shinyMCE"),
 #                   include_R = T,
-#                   user_browser = "chrome",
-#                   app_icon = "EZDocs.ico",
-#                   app_version = "0.1.12"
-# 
+#                   R_version = "3.6.2",
+#                   user_browser = "electron",
+#                   app_icon = "default.ico",
+#                   app_version = "0.1.14"
 # )
+# 
 # RInno::compile_iss()
 
